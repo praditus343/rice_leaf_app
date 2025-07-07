@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rice Leaf Disease Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Rice Leaf Disease Detector</h1>
+            <p>Upload a rice leaf image to identify diseases using AI</p>
+        </header>
+
+        <form action="/" method="POST" enctype="multipart/form-data" id="upload-form">
+            <div class="input-options">
+                <button type="button" class="option-button active" id="upload-option">Upload Image</button>
+                <button type="button" class="option-button" id="camera-option">Use Camera</button>
+            </div>
+
+            <!-- Upload Area Section -->
+            <div id="upload-section">
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-text">
+                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>Drag & drop rice leaf image or click to browse</p>
+                    </div>
+                    <input type="file" name="image" id="file-input" class="file-input" accept="image/*">
+                    <div class="selected-file" id="file-name"></div>
+                </div>
+            </div>
+
+            <!-- Camera Section -->
+            <div id="camera-section" style="display: none;">
+                <div class="camera-container">
+                    <video id="camera-feed" autoplay playsinline></video>
+                    <canvas id="camera-canvas" style="display: none;"></canvas>
+                    <div class="camera-controls">
+                        <button type="button" id="capture-btn" class="control-button">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                        <button type="button" id="switch-camera" class="control-button">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 1l4 4-4 4"></path>
+                                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                                <path d="M7 23l-4-4 4-4"></path>
+                                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <img id="image-preview" class="image-preview" src="#" alt="Preview">
+            <input type="hidden" id="camera-data" name="camera_data">
+            <button type="submit" class="custom-button" id="analyze-btn">Analyze Image</button>
+        </form>
+
+        <div class="results-card" id="results-card" {% if result %} style="display: block;" {% endif %}>
+            <h2>Prediction Results</h2>
+            {% if result %}
+                <div class="result-disease {% if result == 'Healthy Rice Leaf' %}healthy{% endif %} {% if result == 'Not a Rice Leaf' %}not-rice{% endif %}">{{ result }}</div>
+                <div class="confidence-meter">
+                    <div class="confidence-value" style="width: {{ confidence }}"></div>
+                </div>
+                <p>Confidence: {{ confidence }}</p>
+                <div class="description">
+                    {% if result == "Not a Rice Leaf" %}
+                        <p>The uploaded image does not appear to be a rice leaf. Please upload a clear image of a rice leaf for accurate disease detection.</p>
+                        <div class="warning-message">
+                            <p>For best results, use clear images of rice leaves.</p>
+                        </div>
+                    {% elif result == "Healthy Rice Leaf" %}
+                        <p>This rice leaf appears to be healthy with no signs of common diseases. It shows normal coloration and structure typical of a healthy rice plant.</p>
+                    {% elif "Bacterial leaf blight" in result %}
+                        <p>Bacterial leaf blight is a serious disease caused by Xanthomonas oryzae. It typically presents as water-soaked lesions that turn yellow and then white as they mature.</p>
+                        <div class="treatment-info">
+                            <h4>Treatment Recommendations:</h4>
+                            <ul>
+                                <li>Use disease-free seeds</li>
+                                <li>Apply copper-based bactericides</li>
+                                <li>Ensure proper drainage in the field</li>
+                                <li>Remove infected plants</li>
+                            </ul>
+                        </div>
+                    {% elif "Brown spot" in result %}
+                        <p>Brown spot is caused by the Cochliobolus miyabeanus fungus. It appears as oval-shaped brown lesions on leaves that can significantly reduce yield.</p>
+                        <div class="treatment-info">
+                            <h4>Treatment Recommendations:</h4>
+                            <ul>
+                                <li>Apply fungicides like propiconazole or tricyclazole</li>
+                                <li>Maintain proper soil fertility</li>
+                                <li>Use resistant varieties when available</li>
+                                <li>Practice field sanitation</li>
+                            </ul>
+                        </div>
+                    {% elif "Leaf smut" in result %}
+                        <p>Leaf smut is caused by the Entyloma oryzae fungus. It manifests as small black or dark green spots on the leaves.</p>
+                        <div class="treatment-info">
+                            <h4>Treatment Recommendations:</h4>
+                            <ul>
+                                <li>Apply fungicides containing carbendazim</li>
+                                <li>Maintain optimal spacing between plants</li>
+                                <li>Avoid excess nitrogen application</li>
+                                <li>Remove and destroy infected leaves</li>
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <footer>
+            <p>© 2025 Rice Leaf Disease Detector | AI-Powered Analysis</p>
+        </footer>
+    </div>
+
+    <script>
+        // Upload area functionality
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileName = document.getElementById('file-name');
+        const imagePreview = document.getElementById('image-preview');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const cameraData = document.getElementById('camera-data');
+        
+        // Camera functionality
+        const uploadOption = document.getElementById('upload-option');
+        const cameraOption = document.getElementById('camera-option');
+        const uploadSection = document.getElementById('upload-section');
+        const cameraSection = document.getElementById('camera-section');
+        const cameraFeed = document.getElementById('camera-feed');
+        const captureBtn = document.getElementById('capture-btn');
+        const switchCameraBtn = document.getElementById('switch-camera');
+        const cameraCanvas = document.getElementById('camera-canvas');
+        
+        let stream = null;
+        let facingMode = 'environment'; // Start with back camera
+        
+        // Toggle between upload and camera sections
+        uploadOption.addEventListener('click', () => {
+            uploadOption.classList.add('active');
+            cameraOption.classList.remove('active');
+            uploadSection.style.display = 'block';
+            cameraSection.style.display = 'none';
+            stopCamera();
+        });
+        
+        cameraOption.addEventListener('click', () => {
+            cameraOption.classList.add('active');
+            uploadOption.classList.remove('active');
+            uploadSection.style.display = 'none';
+            cameraSection.style.display = 'block';
+            startCamera();
+        });
+        
+        // Camera functionality
+        async function startCamera() {
+            try {
+                if (stream) {
+                    stopCamera();
+                }
+                
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: facingMode },
+                    audio: false
+                });
+                
+                cameraFeed.srcObject = stream;
+            } catch (err) {
+                console.error("Error accessing camera:", err);
+                alert("Could not access the camera. Please allow camera access or use the upload option instead.");
+                uploadOption.click();
+            }
+        }
+        
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+        }
+        
+        // Switch between front and back cameras
+        switchCameraBtn.addEventListener('click', () => {
+            facingMode = facingMode === 'environment' ? 'user' : 'environment';
+            startCamera();
+        });
+        
+        // Capture image from camera
+        captureBtn.addEventListener('click', () => {
+            const context = cameraCanvas.getContext('2d');
+            cameraCanvas.width = cameraFeed.videoWidth;
+            cameraCanvas.height = cameraFeed.videoHeight;
+            
+            context.drawImage(cameraFeed, 0, 0, cameraCanvas.width, cameraCanvas.height);
+            const imageData = cameraCanvas.toDataURL('image/jpeg');
+            
+            imagePreview.src = imageData;
+            imagePreview.style.display = 'block';
+            cameraData.value = imageData;
+            
+            // Visual feedback that photo was taken
+            cameraFeed.style.opacity = '0.5';
+            setTimeout(() => {
+                cameraFeed.style.opacity = '1';
+            }, 200);
+        });
+        
+        // Upload area functionality
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#1b5e20';
+            uploadArea.style.backgroundColor = '#e8f5e9';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#2e7d32';
+            uploadArea.style.backgroundColor = '#f9fbf9';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#2e7d32';
+            uploadArea.style.backgroundColor = '#f9fbf9';
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileName();
+                showPreview();
+            }
+        });
+        
+        fileInput.addEventListener('change', () => {
+            updateFileName();
+            showPreview();
+            // Clear any camera data
+            cameraData.value = '';
+        });
+        
+        function updateFileName() {
+            if (fileInput.files.length > 0) {
+                fileName.textContent = fileInput.files[0].name;
+            }
+        }
+        
+        function showPreview() {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Validate before submission
+        document.getElementById('upload-form').addEventListener('submit', (e) => {
+            if (!fileInput.files.length && !cameraData.value) {
+                e.preventDefault();
+                alert('Please select an image or take a photo first');
+            }
+        });
+    </script>
+</body>
+</html>

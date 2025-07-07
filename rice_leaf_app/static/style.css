@@ -1,0 +1,252 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: #f0f7f0;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    width: 90%;
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    text-align: center;
+}
+
+header {
+    margin-bottom: 20px;
+}
+
+header h1 {
+    color: #2e7d32;
+    margin-bottom: 10px;
+}
+
+header p {
+    color: #666;
+}
+
+/* Input option buttons */
+.input-options {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.option-button {
+    background-color: #f0f0f0;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 5px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.option-button.active {
+    background-color: #2e7d32;
+    color: white;
+}
+
+/* Upload section */
+.upload-area {
+    border: 2px dashed #2e7d32;
+    border-radius: 8px;
+    padding: 30px;
+    margin: 20px 0;
+    background-color: #f9fbf9;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-area:hover {
+    background-color: #e8f5e9;
+}
+
+.upload-text {
+    margin-bottom: 15px;
+}
+
+.file-input {
+    display: none;
+}
+
+/* Camera section */
+.camera-container {
+    margin: 20px 0;
+    position: relative;
+}
+
+#camera-feed {
+    width: 100%;
+    max-width: 500px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    transition: opacity 0.2s ease;
+}
+
+.camera-controls {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+}
+
+.control-button {
+    background-color: #2e7d32;
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.control-button:hover {
+    background-color: #1b5e20;
+    transform: scale(1.05);
+}
+
+#capture-btn {
+    width: 70px;
+    height: 70px;
+}
+
+.custom-button {
+    background-color: #2e7d32;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    margin-top: 15px;
+}
+
+.custom-button:hover {
+    background-color: #1b5e20;
+}
+
+.selected-file {
+    margin-top: 10px;
+    font-style: italic;
+    color: #666;
+}
+
+.results-card {
+    margin-top: 30px;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #e8f5e9;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+.results-card h2 {
+    color: #2e7d32;
+    margin-bottom: 15px;
+}
+
+.result-disease {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 10px 0;
+    color: #d32f2f;
+}
+
+.result-disease.healthy {
+    color: #2e7d32;
+}
+
+.result-disease.not-rice {
+    color: #ff9800;
+}
+
+.confidence-meter {
+    background-color: #eee;
+    height: 20px;
+    border-radius: 10px;
+    margin: 15px 0;
+    overflow: hidden;
+}
+
+.confidence-value {
+    height: 100%;
+    background-color: #2e7d32;
+    border-radius: 10px;
+    transition: width 0.5s ease-in-out;
+}
+
+.description {
+    font-size: 14px;
+    color: #555;
+    margin-top: 15px;
+    text-align: left;
+}
+
+.treatment-info {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: rgba(46, 125, 50, 0.1);
+    border-radius: 8px;
+}
+
+.treatment-info h4 {
+    color: #2e7d32;
+    margin-bottom: 10px;
+}
+
+.treatment-info ul {
+    margin-left: 20px;
+    text-align: left;
+}
+
+.treatment-info li {
+    margin-bottom: 5px;
+}
+
+.warning-message {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #fff3e0;
+    border-left: 3px solid #ff9800;
+    border-radius: 4px;
+}
+
+.warning-message p {
+    color: #e65100;
+    font-weight: 500;
+}
+
+footer {
+    margin-top: 30px;
+    font-size: 14px;
+    color: #777;
+}
+
+.image-preview {
+    max-width: 300px;
+    max-height: 300px;
+    margin: 15px auto;
+    border-radius: 8px;
+    display: none;
+}
+
+.visible {
+    display: block;
+}
