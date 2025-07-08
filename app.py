@@ -9,11 +9,9 @@ import base64
 import re
 from io import BytesIO
 import numpy as np
+import logging
 
 app = Flask(__name__)
-
-# Logging aktif
-import logging
 logging.basicConfig(level=logging.INFO)
 
 # === Load model (ProtoNet)
@@ -33,7 +31,6 @@ class ProtoNet(nn.Module):
         probs = (-dists).softmax(dim=1)
         return probs, dists
 
-# === Setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class_names = ['Bacterial leaf blight', 'Brown spot', 'Leaf smut']
 
@@ -48,12 +45,23 @@ model.eval()
 support_x, support_y = torch.load("support_set_fixed.pt", map_location=device)
 support_x, support_y = support_x.to(device), support_y.to(device)
 
+# Sample support set (agar ringan)
+def sample_support_set(support_x, support_y, n_per_class=5):
+    sampled_x = []
+    sampled_y = []
+    for c in torch.unique(support_y):
+        idx = (support_y == c).nonzero(as_tuple=True)[0]
+        chosen = idx[:n_per_class]
+        sampled_x.append(support_x[chosen])
+        sampled_y.append(support_y[chosen])
+    return torch.cat(sampled_x), torch.cat(sampled_y)
+
 # Preprocessing
 transform = transforms.Compose([
     transforms.Resize((224, 224), antialias=True),
     transforms.CenterCrop(224),
     transforms.ToTensor(),
-    transforms.Lambda(lambda x: x[:3, :, :]),  # Ambil 3 channel RGB
+    transforms.Lambda(lambda x: x[:3, :, :]),  # pastikan RGB
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
 ])
@@ -95,7 +103,10 @@ def index():
                 logging.info(f"[INFO] Green Ratio: {green_ratio:.2f}, Green Dominance: {green_dominance:.2f}")
 
                 with torch.no_grad():
-                    probs, dists = model(support_x, support_y, img_tensor, n_way=3)
+                    # Sampling support
+                    small_x, small_y = sample_support_set(support_x, support_y, n_per_class=5)
+                    probs, dists = model(small_x, small_y, img_tensor, n_way=3)
+
                     min_dist = dists.min().item()
                     pred = probs.argmax(1).item()
                     confidence_value = probs[0][pred].item()
