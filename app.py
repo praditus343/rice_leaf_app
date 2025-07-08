@@ -12,6 +12,10 @@ import numpy as np
 
 app = Flask(__name__)
 
+# Logging aktif
+import logging
+logging.basicConfig(level=logging.INFO)
+
 # === Load model (ProtoNet)
 class ProtoNet(nn.Module):
     def __init__(self, encoder):
@@ -21,12 +25,10 @@ class ProtoNet(nn.Module):
     def forward(self, support, support_labels, query, n_way):
         support_embed = self.encoder(support)
         query_embed = self.encoder(query)
-
         prototypes = []
         for c in range(n_way):
             prototypes.append(support_embed[support_labels == c].mean(0))
         prototypes = torch.stack(prototypes)
-
         dists = torch.cdist(query_embed, prototypes)
         probs = (-dists).softmax(dim=1)
         return probs, dists
@@ -46,15 +48,16 @@ model.eval()
 support_x, support_y = torch.load("support_set_fixed.pt", map_location=device)
 support_x, support_y = support_x.to(device), support_y.to(device)
 
-# Preprocess
+# Preprocessing
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Resize((224, 224), antialias=True),
+    transforms.CenterCrop(224),
     transforms.ToTensor(),
+    transforms.Lambda(lambda x: x[:3, :, :]),  # Ambil 3 channel RGB
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
 ])
 
-# Thresholds for classification
 NON_RICE_LEAF_THRESHOLD = 18.0
 HEALTHY_LEAF_THRESHOLD = 12.0
 MIN_CONFIDENCE_THRESHOLD = 0.4
@@ -73,44 +76,53 @@ def index():
     is_rice_leaf = None
 
     if request.method == "POST":
-        img = None
+        try:
+            img = None
 
-        if 'image' in request.files and request.files['image'].filename:
-            img_file = request.files["image"]
-            img = Image.open(img_file).convert("RGB")
+            if 'image' in request.files and request.files['image'].filename:
+                img_file = request.files["image"]
+                img = Image.open(img_file).convert("RGB")
+            elif 'camera_data' in request.form and request.form['camera_data']:
+                camera_data = request.form['camera_data']
+                image_data = re.sub('^data:image/jpeg;base64,', '', camera_data)
+                img = Image.open(BytesIO(base64.b64decode(image_data))).convert("RGB")
 
-        elif 'camera_data' in request.form and request.form['camera_data']:
-            camera_data = request.form['camera_data']
-            image_data = re.sub('^data:image/jpeg;base64,', '', camera_data)
-            img = Image.open(BytesIO(base64.b64decode(image_data))).convert("RGB")
+            if img:
+                green_ratio, green_dominance = analyze_green_content(img)
+                img_tensor = transform(img).unsqueeze(0).to(device)
 
-        if img:
-            green_ratio, green_dominance = analyze_green_content(img)
-            img_tensor = transform(img).unsqueeze(0).to(device)
+                logging.info(f"[INFO] Input image shape: {img_tensor.shape}")
+                logging.info(f"[INFO] Green Ratio: {green_ratio:.2f}, Green Dominance: {green_dominance:.2f}")
 
-            with torch.no_grad():
-                probs, dists = model(support_x, support_y, img_tensor, n_way=3)
-                min_dist = dists.min().item()
-                pred = probs.argmax(1).item()
-                confidence_value = probs[0][pred].item()
-                all_distances = [d.item() for d in dists[0]]
+                with torch.no_grad():
+                    probs, dists = model(support_x, support_y, img_tensor, n_way=3)
+                    min_dist = dists.min().item()
+                    pred = probs.argmax(1).item()
+                    confidence_value = probs[0][pred].item()
+                    all_distances = [d.item() for d in dists[0]]
 
-                is_rice_leaf = True
-                if ((min_dist > NON_RICE_LEAF_THRESHOLD) or 
-                    (confidence_value < MIN_CONFIDENCE_THRESHOLD) or
-                    (green_ratio < 1.0 and green_dominance < 0.5)):
-                    if min(all_distances) > NON_RICE_LEAF_THRESHOLD * 0.8:
-                        result = "Not a Rice Leaf"
-                        confidence = "100%"
-                        is_rice_leaf = False
+                    is_rice_leaf = True
+                    if ((min_dist > NON_RICE_LEAF_THRESHOLD) or 
+                        (confidence_value < MIN_CONFIDENCE_THRESHOLD) or
+                        (green_ratio < 1.0 and green_dominance < 0.5)):
+                        if min(all_distances) > NON_RICE_LEAF_THRESHOLD * 0.8:
+                            result = "Not a Rice Leaf"
+                            confidence = "100%"
+                            is_rice_leaf = False
 
-                if is_rice_leaf:
-                    if min_dist > HEALTHY_LEAF_THRESHOLD and green_dominance > 0.7:
-                        result = "Healthy Rice Leaf"
-                        confidence = "95%"
-                    else:
-                        result = class_names[pred]
-                        confidence = f"{confidence_value:.2%}"
+                    if is_rice_leaf:
+                        if min_dist > HEALTHY_LEAF_THRESHOLD and green_dominance > 0.7:
+                            result = "Healthy Rice Leaf"
+                            confidence = "95%"
+                        else:
+                            result = class_names[pred]
+                            confidence = f"{confidence_value:.2%}"
+
+        except Exception as e:
+            logging.error(f"[ERROR] Saat memproses gambar: {e}")
+            result = "Gagal menganalisis gambar"
+            confidence = "0%"
+            is_rice_leaf = False
 
     return render_template("index.html",
                            result=result,
